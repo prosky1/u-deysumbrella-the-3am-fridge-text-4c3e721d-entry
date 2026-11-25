@@ -5,7 +5,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 const ENTRY_TEXT =
-  "It's 3am. You opened me again. The leftovers have filed a noise complaint.";
+  "3am. No entry after midnight. The leftovers have a restraining order against you.";
 
 const MAX_CHARS = 140;
 
@@ -23,6 +23,9 @@ function validate(text: string): void {
   }
   if (text.includes("\n") || text.includes("\r")) {
     throw new Error("entry text must be a single line");
+  }
+  if (text !== text.trim()) {
+    throw new Error("entry text must not start or end with whitespace");
   }
   // Guard against invisible/control characters: the entry is plain ASCII,
   // so every character must be printable and one byte in UTF-8. This keeps

@@ -8,9 +8,9 @@ Entry for the [make.fun bounty "The 3AM Fridge Text"](https://make.fun/bounty/u-
 
 ## The entry
 
-> It's 3am. You opened me again. The leftovers have filed a noise complaint.
+> 3am. No entry after midnight. The leftovers have a restraining order against you.
 
-74 characters, one line — a machine that has been awake all night, keeps score, and has finally decided to speak.
+81 characters, one line — the fridge has stopped asking nicely and started citing the rules, with legal paperwork to back it up.
 
 ## How it works
 
