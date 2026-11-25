@@ -1,56 +1,49 @@
-// The 3AM Fridge Text — u-deysumbrella-the-3am-fridge-text-4c3e721d
-// Writes the single-line text a smart fridge sends its owner at 3am
-// to /output/entry.txt. The sealed scorer requires UTF-8 text of
-// 1 to 140 characters, a single line, not only whitespace.
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+// A smart fridge, 3am, one text to its owner.
+// This script guards the line against the bounty rules, saves it to
+// /output/entry.txt, then reads the file back to prove nothing was lost.
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
-const ENTRY_TEXT =
+const FRIDGE_LINE =
   "3am. No entry after midnight. The leftovers have a restraining order against you.";
+const CHAR_LIMIT = 140;
+const OUTPUT_PATH = "/output/entry.txt";
 
-const MAX_CHARS = 140;
-
-function validate(text: string): void {
-  if (text.length === 0) {
-    throw new Error("entry text must not be empty");
+// Gather every rule the line breaks instead of stopping at the first
+// one, so a bad line reports all of its problems in a single error.
+function findProblems(line: string): string[] {
+  const problems: string[] = [];
+  if (line.length === 0) problems.push("empty");
+  if (line.length > CHAR_LIMIT) {
+    problems.push(`too long (${line.length} > ${CHAR_LIMIT} chars)`);
   }
-  if (text.length > MAX_CHARS) {
-    throw new Error(
-      `entry text is ${text.length} characters, over the ${MAX_CHARS} cap`,
-    );
-  }
-  if (text.trim().length === 0) {
-    throw new Error("entry text must not be only whitespace");
-  }
-  if (text.includes("\n") || text.includes("\r")) {
-    throw new Error("entry text must be a single line");
-  }
-  if (text !== text.trim()) {
-    throw new Error("entry text must not start or end with whitespace");
-  }
-  // Guard against invisible/control characters: the entry is plain ASCII,
-  // so every character must be printable and one byte in UTF-8. This keeps
-  // the scorer's character count and the leaderboard's byte count identical.
-  for (const ch of text) {
-    const code = ch.codePointAt(0) as number;
-    if (code < 0x20 || code > 0x7e) {
-      throw new Error(
-        `entry text holds a non-printable-ASCII character (U+${code.toString(16).toUpperCase().padStart(4, "0")})`,
-      );
-    }
-  }
+  if (line.trim() === "") problems.push("whitespace only");
+  if (line !== line.trim()) problems.push("leading or trailing space");
+  if (/[\r\n]/.test(line)) problems.push("more than one line");
+  if (!/^[\x20-\x7E]*$/.test(line)) problems.push("not printable ASCII");
+  return problems;
 }
 
-validate(ENTRY_TEXT);
+const problems = findProblems(FRIDGE_LINE);
+if (problems.length > 0) {
+  throw new Error(`entry rejected: ${problems.join("; ")}`);
+}
+
 mkdirSync("/output", { recursive: true });
-writeFileSync("/output/entry.txt", ENTRY_TEXT, "utf8");
+writeFileSync(OUTPUT_PATH, FRIDGE_LINE, "utf8");
 
-// Runtime guard: read the file back and confirm it round-trips exactly —
-// same text, same byte length, no trailing newline added by the writer.
-const written = readFileSync("/output/entry.txt", "utf8");
-if (written !== ENTRY_TEXT) {
-  throw new Error("round-trip check failed: /output/entry.txt differs");
+// Read-back proof: the file must exist first — a missing file fails
+// here with a plain message instead of a raw ENOENT from the reader —
+// then its contents must match the line exactly, with byte count equal
+// to character count (true only for pure ASCII).
+if (!existsSync(OUTPUT_PATH)) {
+  throw new Error(`read-back failed: ${OUTPUT_PATH} was not created`);
 }
-if (Buffer.byteLength(written, "utf8") !== ENTRY_TEXT.length) {
-  throw new Error("round-trip check failed: unexpected byte length");
+const saved = readFileSync(OUTPUT_PATH, "utf8");
+const savedBytes = Buffer.byteLength(saved, "utf8");
+if (saved !== FRIDGE_LINE || savedBytes !== FRIDGE_LINE.length) {
+  throw new Error(
+    `read-back mismatch: file holds ${savedBytes} bytes, expected ${FRIDGE_LINE.length}`,
+  );
 }
-console.log(`wrote /output/entry.txt (${ENTRY_TEXT.length} characters)`);
+
+console.log(`saved ${FRIDGE_LINE.length}-char line to ${OUTPUT_PATH}`);
